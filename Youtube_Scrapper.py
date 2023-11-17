@@ -1,30 +1,30 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
-
-from datetime import datetime
 
 import googleapiclient.discovery
 import pandas as pd
 import seaborn as sns
+from datetime import datetime
 
-# In[2]:
+
+# In[ ]:
 
 
-YT_API_KEY = ""  # fill in your own API key
+YT_API_KEY = "" # fill your API key here
 channel_ids = [
-    "UCwu4cYxN24_2O0X9ykap8hw",  # wyeth
-    "UC4adGM7Q1oiH0eWYdtM_EHw",  # pediasure
-    "UCx4BmO2RjaFfUv4HB685vDA",  # nutrilon
-    "UC3zUFRtowBsPAEwdO6TV2bw",  # morinaga
-    "UC1ucIleAU9-NWaxh2k9ltPw",  # bebelac
-    "UCwU1sjdXRELEDf058SJQjhQ",  # sgm
-    "UCfL8ndP9r55-K1fUnz2bAtQ",  # enfagrow
-    "UC658JebjTsQJGp3GcJXZCMQ",  # lactogrow
+    "UCwu4cYxN24_2O0X9ykap8hw", # wyeth
+    "UC4adGM7Q1oiH0eWYdtM_EHw", # pediasure
+    "UCx4BmO2RjaFfUv4HB685vDA", # nutrilon
+    "UC3zUFRtowBsPAEwdO6TV2bw", # morinaga
+    "UC1ucIleAU9-NWaxh2k9ltPw", # bebelac
+    "UCwU1sjdXRELEDf058SJQjhQ", # sgm
+    "UCfL8ndP9r55-K1fUnz2bAtQ", # enfagrow
+    "UC658JebjTsQJGp3GcJXZCMQ", # lactogrow
 ]
-yt = googleapiclient.discovery.build("youtube", "v3", developerKey=YT_API_KEY)
+yt = googleapiclient.discovery.build('youtube', 'v3', developerKey=YT_API_KEY)
 print(yt)
 
 
@@ -33,10 +33,10 @@ print(yt)
 
 def datetime_formatter(date_obj):
     # Convert to datetime object
-    dt_object = datetime.strptime(date_obj, "%Y-%m-%dT%H:%M:%SZ")
+    dt_object = datetime.strptime(date_obj, '%Y-%m-%dT%H:%M:%SZ')
 
     # Convert to the desired format (Month, Year)
-    formatted_date = dt_object.strftime("%B, %Y")
+    formatted_date = dt_object.strftime('%B, %Y')
 
     return formatted_date
 
@@ -46,7 +46,8 @@ def datetime_formatter(date_obj):
 
 def get_channel_details(yt: any, channel_ids: list):
     request = yt.channels().list(
-        part="snippet,contentDetails,statistics", id=",".join(channel_ids)
+        part="snippet,contentDetails,statistics",
+        id=",".join(channel_ids)
     )
     response = request.execute()
     channel_stats = [
@@ -56,7 +57,7 @@ def get_channel_details(yt: any, channel_ids: list):
             "views": channel["statistics"]["viewCount"],
             "subscribers": channel["statistics"]["subscriberCount"],
             "total_videos": channel["statistics"]["videoCount"],
-            "upload_id": channel["contentDetails"]["relatedPlaylists"]["uploads"],
+            "upload_id": channel["contentDetails"]["relatedPlaylists"]["uploads"]
         }
         for channel in response["items"]
     ]
@@ -122,13 +123,15 @@ sc = sns.barplot(x="name", y="total_videos", data=channel_data)
 
 def get_video_ids(yt, upload_id: str):
     request = yt.playlistItems().list(
-        part="contentDetails", playlistId=upload_id, maxResults=50
+        part="contentDetails",
+        playlistId=upload_id,
+        maxResults=50
     )
-
+    
     response = request.execute()
     vids = response["items"]
     video_ids = [vid["contentDetails"]["videoId"] for vid in vids]
-
+    
     next_page = response.get("nextPageToken")
     is_next_page = True
     while is_next_page:
@@ -139,14 +142,15 @@ def get_video_ids(yt, upload_id: str):
                 part="contentDetails",
                 playlistId=upload_id,
                 maxResults=50,
-                pageToken=next_page,
+                pageToken=next_page
             )
             response = request.execute()
             vids = response["items"]
             for vid in vids:
                 video_ids.append(vid["contentDetails"]["videoId"])
             next_page = response.get("nextPageToken")
-
+            
+    
     return video_ids
 
 
@@ -156,7 +160,7 @@ def get_video_ids(yt, upload_id: str):
 all_video_ids = []
 for ch in channel_stats_data:
     all_video_ids += get_video_ids(yt, ch["upload_id"])
-
+    
 len(all_video_ids)
 
 
@@ -170,8 +174,8 @@ def get_video_details(yt, video_ids: list):
     for idx in range(0, len(video_ids), 50):
         request = yt.videos().list(
             part="snippet,contentDetails,statistics",
-            id=",".join(video_ids[idx : idx + 50]),
-            maxResults=50,
+            id=",".join(video_ids[idx:idx+50]),
+            maxResults=50
         )
         response = request.execute()
         vids_details = response["items"]
@@ -186,7 +190,9 @@ def get_video_details(yt, video_ids: list):
                     "likes": vid["statistics"].get("likeCount", 0),
                     "dislikes": vid["statistics"].get("dislikeCount", 0),
                     "favorites": vid["statistics"].get("favoriteCount", 0),
-                    "link": "https://www.youtube.com/watch?v={}".format(vid["id"]),
+                    "comments": vid["statistics"].get("commentCount", 0),
+                    "link": "https://www.youtube.com/watch?v={}".format(vid["id"])
+                    
                 }
             )
     return all_video_details
@@ -208,6 +214,7 @@ video_df["views"] = pd.to_numeric(video_df["views"])
 video_df["likes"] = pd.to_numeric(video_df["likes"])
 video_df["dislikes"] = pd.to_numeric(video_df["dislikes"])
 video_df["favorites"] = pd.to_numeric(video_df["favorites"])
+video_df["comments"] = pd.to_numeric(video_df["comments"])
 video_df.dtypes
 
 
@@ -216,6 +223,8 @@ video_df.dtypes
 
 top_10_by_views = video_df.sort_values(by="views", ascending=False).head(10)
 
+
+# ## TOP 10 VIDEOS BY VIEWS
 
 # In[18]:
 
@@ -226,30 +235,23 @@ top_10_by_views
 # In[19]:
 
 
-sns.set(rc={"figure.figsize": (10, 8)})
-top_videos_chart_from_all_channels = sns.barplot(
-    x="views", y="title", hue="brand_name", data=top_10_by_views
-)
+sns.set(rc={"figure.figsize": (8, 8)})
+top_videos_chart_from_all_channels = sns.barplot(x="views", y="title", hue="brand_name", data=top_10_by_views)
 
 
 # In[20]:
 
 
 import base64
-
 from IPython.display import HTML
 
-
-def create_download_link(df, title="Download CSV file", filename="data.csv"):
+def create_download_link( df, title = "Download CSV file", filename = "data.csv"):
     csv = df.to_csv()
     b64 = base64.b64encode(csv.encode())
     payload = b64.decode()
     html = '<a download="{filename}" href="data:text/csv;base64,{payload}" target="_blank">{title}</a>'
-    html = html.format(payload=payload, title=title, filename=filename)
+    html = html.format(payload=payload,title=title,filename=filename)
     return HTML(html)
-
 
 create_download_link(video_df)
 
-
-# In[ ]:
